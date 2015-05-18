@@ -19,9 +19,8 @@ class Object {
     public function __construct(\SimpleXMLElement $xml = null, Connection $youtrack = null)
     {
         $this->youtrack = $youtrack;
-        if ($xml) {
-            $this->updateAttributes($xml);
-            $this->updateChildrenAttributes($xml);
+        if ($xml !== null) {
+            $this->update($xml);
         }
     }
 
@@ -36,6 +35,12 @@ class Object {
     public function __set($name, $value)
     {
         $this->attributes["$name"] = $value;
+    }
+
+    protected function update($xml)
+    {
+        $this->updateAttributes($xml);
+        $this->updateChildrenAttributes($xml);
     }
 
     protected function updateAttributes(\SimpleXMLElement $xml)

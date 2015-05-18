@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<enumeration name="enumTestBundle">
+    <value>V1</value>
+    <value>V2</value>
+    <value>V3</value>
+</enumeration>
