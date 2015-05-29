@@ -31,6 +31,11 @@ class Connection
     protected $responseLoggingPath = './';
 
     /**
+     * @var array
+     */
+    protected $response_headers = array();
+
+    /**
      * @param string $url
      * @param string $username
      * @param string $password
@@ -160,20 +165,27 @@ class Connection
                 break;
             case 'PUT':
                 $handle = null;
-                // Check if we got a file or just a string of data.
-                if (is_string($body) && file_exists($body)) {
-                    $size = filesize($body);
-                    if (!$size) {
-                        throw new \Exception("Can't open file $body!");
-                    }
-                    $handle = fopen($body, 'r');
+                if (is_array($body)) {
+                    $body = http_build_query($body);
+                    curl_setopt($this->http, CURLOPT_CUSTOMREQUEST, "PUT");
+                    curl_setopt($this->http, CURLOPT_HTTPHEADER, array('Content-Length: ' . strlen($body)));
+                    curl_setopt($this->http, CURLOPT_POSTFIELDS, $body);
                 } else {
-                    $size = mb_strlen($body);
-                    $handle = fopen('data://text/plain,' . $body, 'r');
+                    // Check if we got a file or just a string of data.
+                    if (is_string($body) && file_exists($body)) {
+                        $size = filesize($body);
+                        if (!$size) {
+                            throw new \Exception("Can't open file $body!");
+                        }
+                        $handle = fopen($body, 'r');
+                    } else {
+                        $size = mb_strlen($body);
+                        $handle = fopen('data://text/plain,' . $body, 'r');
+                    }
+                    curl_setopt($this->http, CURLOPT_PUT, true);
+                    curl_setopt($this->http, CURLOPT_INFILE, $handle);
+                    curl_setopt($this->http, CURLOPT_INFILESIZE, $size);
                 }
-                curl_setopt($this->http, CURLOPT_PUT, true);
-                curl_setopt($this->http, CURLOPT_INFILE, $handle);
-                curl_setopt($this->http, CURLOPT_INFILESIZE, $size);
                 break;
             case 'POST':
                 curl_setopt($this->http, CURLOPT_POST, true);
@@ -204,9 +216,15 @@ class Connection
         curl_setopt($this->http, CURLOPT_SSL_VERIFYPEER, $this->verify_ssl);
         curl_setopt($this->http, CURLOPT_VERBOSE, $this->debug_verbose);
         curl_setopt($this->http, CURLOPT_COOKIE, implode(';', $this->cookies));
+        curl_setopt($this->http, CURLOPT_HEADER, true);
         $content = curl_exec($this->http);
         $response = curl_getinfo($this->http);
         curl_close($this->http);
+
+        $response_header_size = $response['header_size'];
+        $response_header = substr($content, 0, $response_header_size);
+        $content = substr($content, $response_header_size);
+        $this->response_headers = $this->getResponseHeaders($response_header);
 
         if (
             (int) $response['http_code'] != 200 &&
@@ -315,6 +333,7 @@ class Connection
      * @param string $summary the obligatory issue summary
      * @param array $params optional additional parameters for the new issue (look into your personal youtrack instance!)
      * @return Issue
+     * @throws \Exception
      */
     public function createIssue($project, $summary, $params = array())
     {
@@ -336,8 +355,16 @@ class Connection
         if (empty($body)) {
             $body = null;
         }
-        $issue = $this->requestXml('PUT', '/issue?'. http_build_query($params), $body);
-        return new Issue($issue, $this);
+        $this->requestXml('PUT', '/issue?'. http_build_query($params), $body);
+
+        if (!isset($this->response_headers['Location'])) {
+            throw new \Exception('issue location not found');
+        }
+
+        $new_issue_location = $this->response_headers['Location'];
+        $new_issue_id = basename($new_issue_location);
+        $new_issue = $this->getIssue($new_issue_id);
+        return $new_issue;
     }
 
     /**
@@ -1363,5 +1390,32 @@ class Connection
             );
         }
         return $bundle;
+    }
+
+    /**
+     * @param string $response_header
+     *
+     * @return array
+     */
+    protected function getResponseHeaders($response_header)
+    {
+        $rows = explode("\r\n", $response_header);
+
+        // filter empty rows
+        $rows = array_filter($rows, function($value){
+            return !empty($value);
+        });
+
+        $headers = array();
+        foreach ($rows as $row) {
+            $pos = strpos($row, ':');
+            if ($pos !== false) {
+                $key = substr($row, 0, $pos);
+                $value = substr($row, $pos + 1);
+                $headers[$key] = trim($value);
+            }
+        }
+
+        return $headers;
     }
 }
