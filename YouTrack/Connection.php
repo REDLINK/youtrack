@@ -19,6 +19,8 @@ class Connection
     private $debug_verbose = false; // Set to TRUE to enable verbose logging of curl messages.
     private $user_agent = 'Mozilla/5.0'; // Use this as user agent string.
     private $verify_ssl = false;
+    private $connectTimeout; // seconds
+    private $timeout; // seconds
 
     /**
      * @var bool
@@ -34,13 +36,16 @@ class Connection
      * @param string $url
      * @param string $username
      * @param string $password
-     * @throws Exception
+     * @param int $connectTimeout seconds
+     * @param int $timeout seconds
      */
-    public function __construct($url, $username, $password)
+    public function __construct($url, $username, $password, $connectTimeout = null, $timeout = null)
     {
         $this->http = curl_init();
         $this->url = $url;
         $this->base_url = $url . '/rest';
+        $this->setConnectTimeout($connectTimeout);
+        $this->setTimeout($timeout);
         $this->login($username, $password);
     }
 
@@ -93,6 +98,12 @@ class Connection
         curl_setopt($this->http, CURLOPT_USERAGENT, $this->user_agent);
         curl_setopt($this->http, CURLOPT_VERBOSE, $this->debug_verbose);
         curl_setopt($this->http, CURLOPT_POSTFIELDS, "a");
+        if (is_numeric($this->connectTimeout)) {
+            curl_setopt($this->http, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
+        }
+        if (is_numeric($this->timeout)) {
+            curl_setopt($this->http, CURLOPT_TIMEOUT, $this->timeout);
+        }
         $content = curl_exec($this->http);
         $response = curl_getinfo($this->http);
 
@@ -208,6 +219,12 @@ class Connection
         curl_setopt($this->http, CURLOPT_SSL_VERIFYPEER, $this->verify_ssl);
         curl_setopt($this->http, CURLOPT_VERBOSE, $this->debug_verbose);
         curl_setopt($this->http, CURLOPT_COOKIE, implode(';', $this->cookies));
+        if (is_numeric($this->connectTimeout)) {
+            curl_setopt($this->http, CURLOPT_CONNECTTIMEOUT, $this->connectTimeout);
+        }
+        if (is_numeric($this->timeout)) {
+            curl_setopt($this->http, CURLOPT_TIMEOUT, $this->timeout);
+        }
         $content = curl_exec($this->http);
         $response = curl_getinfo($this->http);
         curl_close($this->http);
@@ -1317,6 +1334,28 @@ class Connection
     public function setVerifySsl($verify_ssl)
     {
         $this->verify_ssl = $verify_ssl;
+    }
+
+    /**
+     * @param int $timeout seconds
+     * @return $this
+     */
+    public function setTimeout($timeout)
+    {
+        $this->timeout = (int)$timeout;
+
+        return $this;
+    }
+
+    /**
+     * @param int $connectTimeout seconds
+     * @return $this
+     */
+    public function setConnectTimeout($connectTimeout)
+    {
+        $this->connectTimeout = (int) $connectTimeout;
+
+        return $this;
     }
 
     /**
