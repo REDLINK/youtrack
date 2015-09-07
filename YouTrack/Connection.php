@@ -1196,6 +1196,17 @@ class Connection
     }
 
     /**
+     * @param string $name bundle name
+     * @param string $value bundle value to update
+     * @param string $newValue new bundle value
+     * @return array
+     */
+    public function updateValueInEnumBundle($name, $value, $newValue)
+    {
+        return $this->request('POST', '/admin/customfield/bundle/' . rawurlencode($name) . '/' . rawurlencode($value) . '?newValue=' . rawurlencode($newValue));
+    }
+
+    /**
      * @param string $name
      * @param string[] $values
      * @return string
