@@ -30,4 +30,12 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->setExpectedException('\YouTrack\IncorrectLoginException');
         $method->invoke($con, $content, $response);
     }
+
+    public function testGetFieldType()
+    {
+        $con = new TestConnection();
+
+        $this->assertEquals('ownedField', $con->getFieldType('ownedField[1]'));
+        $this->assertEquals('ownedField', $con->getFieldType('ownedField'));
+    }
 }

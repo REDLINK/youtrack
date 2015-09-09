@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ownedFieldBundle name="KS: Subsystems">
+    <ownedField owner="&lt;no user&gt;" colorIndex="4">Test</ownedField>
+    <ownedField owner="userX" colorIndex="4">TestWithOwner</ownedField>
+    <ownedField description="Test" owner="&lt;no user&gt;" colorIndex="1">TestWitDescription</ownedField>
+</ownedFieldBundle>

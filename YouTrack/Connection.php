@@ -22,6 +22,15 @@ class Connection
     private $connectTimeout; // seconds
     private $timeout; // seconds
 
+    private $bundle_paths  = array(
+        'ownedField' => 'ownedFieldBundle',
+        'enum'       => 'bundle',
+        /*'build'      => 'buildBundle',
+        'state'      => 'stateBundle',
+        'version'    => 'versionBundle',
+        'user'       => 'userBundle'*/
+    );
+
     /**
      * @var bool
      */
@@ -1156,12 +1165,54 @@ class Connection
     }
 
     /**
+     * @param $fieldType
+     * @param $name
+     *
+     * @return Bundle
+     * @throws \Exception
+     */
+    public function getBundle($fieldType, $name)
+    {
+        $fieldType = $this->getFieldType($fieldType);
+
+        $className= 'YouTrack\\' . ucfirst($fieldType) . 'Bundle';
+
+        $bundlePath = null;
+        if (isset($this->bundle_paths[$fieldType])) {
+            $bundlePath = $this->bundle_paths[$fieldType];
+        }
+
+        if (!$bundlePath) {
+            throw new \Exception('Unknown bundle field type');
+        }
+
+        return new $className(
+            $this->get(sprintf('/admin/customfield/%s/%s', $bundlePath, rawurlencode($name))),
+            $this
+        );
+    }
+
+    /**
+     * @param $fieldType
+     *
+     * @return string
+     */
+    public function getFieldType($fieldType)
+    {
+        if (false !== strpos($fieldType, '[')) {
+            return substr($fieldType, 0, -3);
+        }
+
+        return $fieldType;
+    }
+
+    /**
      * @param string $name
      * @return EnumBundle
      */
     public function getEnumBundle($name)
     {
-        return new EnumBundle($this->get('/admin/customfield/bundle/' . rawurlencode($name)), $this);
+        return $this->getBundle('enum', $name);
     }
 
     /**
