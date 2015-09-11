@@ -309,11 +309,16 @@ class Connection
 
     /**
      * @param string $id
+     * @param array $params key/values, e.g. 'wikifyDescription' => 'true'
      * @return Issue
      */
-    public function getIssue($id)
+    public function getIssue($id, $params = array())
     {
-        $issue = $this->get('/issue/' . $id);
+        $paramString = '';
+        if (!empty($params)) {
+            $paramString = '?' . http_build_query($params);
+        }
+        $issue = $this->get('/issue/' . $id . $paramString);
         return new Issue($issue, $this);
     }
 
